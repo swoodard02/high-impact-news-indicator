@@ -38,18 +38,19 @@ jobs:
         if git diff --cached --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Auto update high impact news"
+        git commit -m "Auto update high impact news"
         fi
 
-        # Stash any unstaged changes before pull
-        git stash --include-untracked
+        # Stash any unstaged/untracked changes before pulling
+        git stash push --include-untracked -m "auto-stash"
 
         git pull --rebase origin main
 
-        # Re-apply stashed changes (if any)
+        # Apply the stash if there was any
         git stash pop || echo "No stash to apply"
 
         git push origin main
+
 
 
 
