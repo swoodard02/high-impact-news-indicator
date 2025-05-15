@@ -1,47 +1,40 @@
-name: Update High Impact News
+name: Fetch High Impact News
 
 on:
   schedule:
-    - cron: '0 * * * *'   # Runs every hour at minute 0
-  workflow_dispatch:       # Allows manual trigger
+    - cron: "0 * * * *" # runs every hour
+  workflow_dispatch:
 
 jobs:
-  update-news:
+  fetch-news:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: 3.11
 
     - name: Install dependencies
       run: pip install feedparser
 
     - name: Run fetch_news.py
-      run: |
-        python fetch_news.py
-      continue-on-error: false
+      run: python fetch_news.py
 
-    - name: List files and check JSON
-      run: |
-        ls -lah
-        cat high_impact_news.json || echo "File not found"
-
-    - name: Commit & push changes
+    - name: Configure Git
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add high_impact_news.json
 
-        if git diff --cached --quiet; then
-          echo "No changes to commit."
-        else
-          git commit -m "Auto update high impact news"
-          git push
-        fi
+    - name: Commit and Push changes
+      run: |
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        git add high_impact_news.json
+        git commit -m "Auto update high impact news" || echo "No changes to commit"
+        git push
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
