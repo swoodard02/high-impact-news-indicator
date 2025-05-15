@@ -14,11 +14,11 @@ try:
             if '<span class="sprite sprite-common sprite-high-impact">' in entry.summary:
                 published_str = entry.published
                 try:
-                    # ✅ Try with NO seconds first
+                    # First try the format without seconds
                     dt = datetime.datetime.strptime(published_str, "%a, %d %b %Y %H:%M %Z")
                 except ValueError:
                     try:
-                        # ✅ Then try WITH seconds
+                        # Fallback to format with seconds
                         dt = datetime.datetime.strptime(published_str, "%a, %d %b %Y %H:%M:%S %Z")
                     except ValueError:
                         print(f"❌ Could not parse date: '{published_str}'")
