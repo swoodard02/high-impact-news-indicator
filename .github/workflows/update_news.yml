@@ -1,0 +1,37 @@
+name: Update High Impact News
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # Runs every hour at minute 0
+  workflow_dispatch:       # Allows manual trigger
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: pip install feedparser
+
+    - name: Run fetch_news.py
+      run: python fetch_news.py
+
+    - name: Commit & push changes
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add high_impact_news.json
+        git commit -m "Auto update high impact news"
+        git push
+      env:
+        # Use the automatically provided GITHUB_TOKEN for auth
+        # No need to store your personal token here
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
