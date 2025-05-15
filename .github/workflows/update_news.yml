@@ -32,14 +32,22 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
 
-    - name: Commit and push updated file
+    - name: Commit & push changes
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git pull --rebase origin main  # <--- this resolves your issue
+    
+        git pull --rebase origin main
+    
         git add high_impact_news.json
-        git commit -m "Auto update high impact news" || echo "No changes to commit"
-        git push origin main --force
+    
+        if git diff --cached --quiet; then
+          echo "No changes to commit."
+        else
+          git commit -m "Auto update high impact news"
+          git push origin main
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
