@@ -1,25 +1,32 @@
-import feedparser
-import datetime
-import json
+import sys
+import traceback
 
-RSS_URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
-
-def get_high_impact_events():
-    feed = feedparser.parse(RSS_URL)
-    high_impact_events = []
+try:
+    import feedparser
+    import json
+    import datetime
     
-    for entry in feed.entries:
-        if 'sprite-high-impact' in entry.summary:
-            # Parse datetime from entry
-            dt = datetime.datetime.strptime(entry.published, "%a, %d %b %Y %H:%M %Z")
-            iso_format = dt.isoformat() + "Z"  # Append 'Z' for UTC
-            high_impact_events.append(iso_format)
-
-    return high_impact_events
-
-# Save the events to a JSON file
-if __name__ == "__main__":
+    def get_high_impact_events():
+        feed_url = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
+        feed = feedparser.parse(feed_url)
+        events = []
+        for entry in feed.entries:
+            # Example: checking for high impact by matching the icon or keyword
+            if '<span class="sprite sprite-common sprite-high-impact">' in entry.summary:
+                dt = datetime.datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z")
+                events.append({
+                    "title": entry.title,
+                    "date": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    "impact": "high"
+                })
+        return events
+    
     events = get_high_impact_events()
+    
     with open("high_impact_news.json", "w") as f:
         json.dump(events, f, indent=2)
-    print(f"Saved {len(events)} events to high_impact_news.json")
+
+except Exception as e:
+    print("Error occurred:", e)
+    traceback.print_exc()
+    sys.exit(1)
