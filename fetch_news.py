@@ -13,7 +13,10 @@ try:
         for entry in feed.entries:
             # Example: checking for high impact by matching the icon or keyword
             if '<span class="sprite sprite-common sprite-high-impact">' in entry.summary:
-                dt = datetime.datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z")
+                try:
+                    dt = datetime.datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z")
+                except ValueError:
+                    dt = datetime.datetime.strptime(entry.published, "%a, %d %b %Y %H:%M %Z")
                 events.append({
                     "title": entry.title,
                     "date": dt.strftime("%Y-%m-%d %H:%M:%S"),
