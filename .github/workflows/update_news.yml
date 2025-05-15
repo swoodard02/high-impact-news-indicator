@@ -35,15 +35,13 @@ jobs:
           git pull --rebase origin main || true
           git stash pop || true
 
-      - name: Commit changes if any
+      - name: Push changes using PAT
+        env:
+          TOKEN: ${{ secrets.PAT }}
         run: |
-          git add high_impact_news.json
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Auto update high impact news"
-            git push origin main
-          fi
+          git remote set-url origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}
+          git push origin main
+
 
 
 
