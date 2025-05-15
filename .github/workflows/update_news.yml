@@ -1,51 +1,49 @@
-name: Update High Impact News
+name: Fetch High Impact News
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: "*/5 * * * *"  # every 5 minutes
   workflow_dispatch:
 
 jobs:
-  update_news:
+  fetch-news:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v3
 
-      - name: Pull latest changes (rebase)
-        run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          git stash push --include-untracked -m "auto-stash"
-          git pull --rebase origin main
-          git stash pop || true
-
-      - name: Setup Python 3.x
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
-      - name: Install feedparser
-        run: pip install feedparser
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Run fetch_news.py
         run: python fetch_news.py
 
-      - name: Commit updated high_impact_news.json if needed
+      - name: Configure Git
         run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
-          if git status --porcelain | grep -q high_impact_news.json; then
-            git add high_impact_news.json
-            git commit -m "Update high_impact_news.json [skip ci]"
-            git push origin main
-          else
-            echo "No changes to high_impact_news.json"
-          fi
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Stash uncommitted changes before pulling
+        run: |
+          git stash push --include-untracked --message "Auto stash before rebase"
+          git pull --rebase origin main || true
+          git stash pop || true
+
+      - name: Commit changes if any
+        run: |
+          git add high_impact_news.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto update high impact news"
+            git push origin main
+          fi
 
 
 
