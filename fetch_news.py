@@ -10,14 +10,18 @@ try:
         feed = feedparser.parse(feed_url)
         events = []
         for entry in feed.entries:
-            # Check for high impact in the summary
             if '<span class="sprite sprite-common sprite-high-impact">' in entry.summary:
+                published_str = entry.published
                 try:
-                    # Try without seconds first
-                    dt = datetime.datetime.strptime(entry.published, "%a, %d %b %Y %H:%M %Z")
+                    # First try format WITHOUT seconds
+                    dt = datetime.datetime.strptime(published_str, "%a, %d %b %Y %H:%M %Z")
                 except ValueError:
-                    # Then try with seconds
-                    dt = datetime.datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z")
+                    try:
+                        # Then try format WITH seconds
+                        dt = datetime.datetime.strptime(published_str, "%a, %d %b %Y %H:%M:%S %Z")
+                    except ValueError as ve:
+                        print(f"⚠️ Could not parse date: '{published_str}'")
+                        raise ve
 
                 events.append({
                     "title": entry.title,
@@ -32,6 +36,6 @@ try:
         json.dump(events, f, indent=2)
 
 except Exception as e:
-    print("Error occurred:", e)
+    print("❌ Error occurred:", e)
     traceback.print_exc()
     sys.exit(1)
