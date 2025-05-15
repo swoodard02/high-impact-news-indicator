@@ -14,15 +14,15 @@ try:
             if '<span class="sprite sprite-common sprite-high-impact">' in entry.summary:
                 published_str = entry.published
                 try:
-                    # ✅ First try WITHOUT seconds
+                    # ✅ Try with NO seconds first
                     dt = datetime.datetime.strptime(published_str, "%a, %d %b %Y %H:%M %Z")
                 except ValueError:
                     try:
                         # ✅ Then try WITH seconds
                         dt = datetime.datetime.strptime(published_str, "%a, %d %b %Y %H:%M:%S %Z")
-                    except ValueError as ve:
-                        print(f"⚠️ Could not parse date: '{published_str}'")
-                        raise ve
+                    except ValueError:
+                        print(f"❌ Could not parse date: '{published_str}'")
+                        raise
 
                 events.append({
                     "title": entry.title,
@@ -41,4 +41,3 @@ except Exception as e:
     print("❌ Error occurred:", e)
     traceback.print_exc()
     sys.exit(1)
-
