@@ -39,7 +39,7 @@ jobs:
         git pull --rebase origin main  # <--- this resolves your issue
         git add high_impact_news.json
         git commit -m "Auto update high impact news" || echo "No changes to commit"
-        git push origin main
+        git push origin main --force
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
