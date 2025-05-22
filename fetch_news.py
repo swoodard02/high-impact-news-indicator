@@ -11,10 +11,8 @@ POSTED_EVENTS_FILE = "posted_events.json"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-HIGH_IMPACT_KEYWORDS = ['high impact', 'important', 'critical', 'major']
-MEDIUM_IMPACT_KEYWORDS = ['medium impact', 'moderate', 'watch']
-
-EASTERN_TZ = pytz.timezone('US/Eastern')
+HIGH_IMPACT_KEYWORDS = ['high-impact']
+MEDIUM_IMPACT_KEYWORDS = ['medium-impact']
 
 def load_posted_events():
     if os.path.exists(POSTED_EVENTS_FILE):
@@ -26,29 +24,32 @@ def save_posted_events(posted):
     with open(POSTED_EVENTS_FILE, "w") as f:
         json.dump(list(posted), f)
 
-def parse_pubdate(pubdate_str):
-    date_formats = [
-        '%a, %d %b %Y %H:%M:%S %Z',
-        '%a, %d %b %Y %H:%M %Z',
-        '%a, %d %b %Y %H:%M:%S',
-        '%a, %d %b %Y %H:%M',
-    ]
-    for fmt in date_formats:
-        try:
-            dt = datetime.strptime(pubdate_str, fmt)
-            if dt.tzinfo is None:
-                dt = pytz.UTC.localize(dt)
-            return dt.astimezone(pytz.UTC)
-        except Exception:
-            continue
-    print(f"Time parsing error: time data '{pubdate_str}' does not match expected formats")
-    return None
+def parse_pubdate(pub_date_str):
+    try:
+        # Remove ' GMT' suffix if present
+        pub_date_str = pub_date_str.replace(" GMT", "")
+        # Parse datetime without seconds
+        dt = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M')
+        # Localize as UTC
+        return pytz.UTC.localize(dt)
+    except Exception as e:
+        print(f"Time parsing error: {e}")
+        return None
 
-def is_within_next_60_minutes(event_time):
-    if not event_time:
+def format_datetime_et(dt):
+    if dt is None:
+        return ("Unknown Date", "Unknown Time")
+    eastern = pytz.timezone("US/Eastern")
+    dt_et = dt.astimezone(eastern)
+    date_str = dt_et.strftime("%m/%d/%Y")
+    time_str = dt_et.strftime("%H:%M")
+    return date_str, time_str
+
+def is_within_next_60_minutes(event_dt):
+    if event_dt is None:
         return False
     now = datetime.now(pytz.UTC)
-    delta = event_time - now
+    delta = event_dt - now
     return timedelta(0) <= delta <= timedelta(minutes=60)
 
 def determine_impact(title):
@@ -61,26 +62,24 @@ def determine_impact(title):
             return 'Medium Impact'
     return None
 
-def format_datetime_et(event_time):
-    # Convert UTC to Eastern Time
-    if event_time is None:
-        return "Unknown Date/Time"
-    et_time = event_time.astimezone(EASTERN_TZ)
-    # Format MM/DD/YYYY and HH:MM (24h)
-    date_str = et_time.strftime('%m/%d/%Y')
-    time_str = et_time.strftime('%H:%M')
-    return date_str, time_str
-
 def send_telegram_message(message):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Telegram token or chat ID not set in environment variables.")
+        return False
+
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
         "parse_mode": "HTML"
     }
-    response = requests.post(url, data=payload)
-    print(f"Telegram response: {response.status_code} - {response.text}")
-    return response.ok
+    try:
+        response = requests.post(url, data=payload)
+        print(f"Telegram response: {response.status_code} - {response.text}")
+        return response.ok
+    except Exception as e:
+        print(f"Failed to send telegram message: {e}")
+        return False
 
 def fetch_and_post_events():
     feed = feedparser.parse(FEED_URL)
@@ -96,23 +95,21 @@ def fetch_and_post_events():
         impact = determine_impact(title)
         icon = ''
         if impact == 'High Impact':
-            icon = '🔴 '
+            icon = '🔴'
         elif impact == 'Medium Impact':
-            icon = '🟠 '
+            icon = '🟠'
 
         date_str, time_str = format_datetime_et(event_time)
 
-        print(f"Title: {icon}{title} | Published: {date_str} {time_str} ET | Impact: {impact or 'None'}")
-
-        if is_within_next_60_minutes(event_time):
-            print(f"⏰ Event within 60 minutes: {title}")
+        # One-line display with icon, title, and datetime in ET
+        output_line = f"{icon} {title} at {date_str} {time_str} ET"
+        print(output_line)
 
         event_key = f"{title}::{date_str} {time_str}"
 
         if is_within_next_60_minutes(event_time) and event_key not in posted_events:
-            message = f"<b>{icon}{title}</b>\nPublished: {date_str} {time_str} ET"
-            if impact:
-                message += f"\nImpact: {impact}"
+            # Telegram message same as output line
+            message = output_line
             success = send_telegram_message(message)
             if success:
                 posted_events.add(event_key)
@@ -125,7 +122,7 @@ def send_test_message():
     print("Test message sent!" if success else "Failed to send test message.")
 
 if __name__ == "__main__":
-    # send_test_message()
+    #send_test_message()
     fetch_and_post_events()
 
 
