@@ -81,15 +81,16 @@ def fetch_and_post_events():
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
 
-        # Compose color text for testing visibility
-        color_text = ""
+        # Use emojis for impact instead of text color
+        impact_emoji = ""
         if impact == "High Impact":
-            color_text = "red"
+            impact_emoji = "🔴"
         elif impact == "Medium Impact":
-            color_text = "orange"
+            impact_emoji = "🟠"
+        else:
+            impact_emoji = "⚪"
 
-        # Build the message - display impact color text + title + date/time on one line
-        message = f"<b>{title}</b> <i>{color_text}</i> at {event_time_str}"
+        message = f"{impact_emoji} <b>{title}</b> at {event_time_str}"
 
         if is_within_next_60_minutes(pub_date) and title not in posted_events:
             print(f"Posting event: {message}")
@@ -107,4 +108,5 @@ def send_test_message():
 if __name__ == "__main__":
     # send_test_message()
     fetch_and_post_events()
+
 
