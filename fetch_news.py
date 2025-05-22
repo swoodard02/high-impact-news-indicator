@@ -11,8 +11,7 @@ POSTED_EVENTS_FILE = "posted_events.json"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-HIGH_IMPACT_KEYWORDS = ['high-impact']
-MEDIUM_IMPACT_KEYWORDS = ['medium-impact']
+EASTERN = pytz.timezone("US/Eastern")
 
 def load_posted_events():
     if os.path.exists(POSTED_EVENTS_FILE):
@@ -24,98 +23,89 @@ def save_posted_events(posted):
     with open(POSTED_EVENTS_FILE, "w") as f:
         json.dump(list(posted), f)
 
-def parse_pubdate(pub_date_str):
+def is_within_next_30_minutes(event_time_str):
     try:
-        # Remove ' GMT' suffix if present
-        pub_date_str = pub_date_str.replace(" GMT", "")
-        # Parse datetime without seconds
-        dt = datetime.strptime(pub_date_str, '%a, %d %b %Y %H:%M')
-        # Localize as UTC
-        return pytz.UTC.localize(dt)
+        # Strip GMT and parse as naive datetime
+        event_time_str = event_time_str.replace(" GMT", "")
+        event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
+
+        # Assume UTC since the feed says GMT
+        event_time = pytz.UTC.localize(event_time)
+
+        now = datetime.now(pytz.UTC)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=60)
     except Exception as e:
         print(f"Time parsing error: {e}")
+        return False
+
+def convert_to_eastern(event_time_str):
+    try:
+        event_time_str = event_time_str.replace(" GMT", "")
+        event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
+        event_time = pytz.UTC.localize(event_time)
+        eastern_time = event_time.astimezone(EASTERN)
+        return eastern_time
+    except Exception as e:
+        print(f"Time conversion error: {e}")
         return None
 
-def format_datetime_et(dt):
-    if dt is None:
-        return ("Unknown Date", "Unknown Time")
-    eastern = pytz.timezone("US/Eastern")
-    dt_et = dt.astimezone(eastern)
-    date_str = dt_et.strftime("%m/%d/%Y")
-    time_str = dt_et.strftime("%H:%M")
-    return date_str, time_str
-
-def is_within_next_60_minutes(event_dt):
-    if event_dt is None:
-        return False
-    now = datetime.now(pytz.UTC)
-    delta = event_dt - now
-    return timedelta(0) <= delta <= timedelta(minutes=60)
-
-def determine_impact(title):
-    title_lower = title.lower()
-    for kw in HIGH_IMPACT_KEYWORDS:
-        if kw in title_lower:
-            return 'High Impact'
-    for kw in MEDIUM_IMPACT_KEYWORDS:
-        if kw in title_lower:
-            return 'Medium Impact'
-    return None
-
 def send_telegram_message(message):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Telegram token or chat ID not set in environment variables.")
-        return False
-
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
         "parse_mode": "HTML"
     }
-    try:
-        response = requests.post(url, data=payload)
-        print(f"Telegram response: {response.status_code} - {response.text}")
-        return response.ok
-    except Exception as e:
-        print(f"Failed to send telegram message: {e}")
-        return False
-
+    response = requests.post(url, data=payload)
+    print(f"Telegram response: {response.status_code} - {response.text}")
+    return response.ok
 
 def fetch_and_post_events():
     feed = feedparser.parse(FEED_URL)
     posted_events = load_posted_events()
 
-    print(f"Fetched {len(feed.entries)} entries from RSS feed.\n")
+    print(f"Fetched {len(feed.entries)} entries from RSS feed.")
 
     for entry in feed.entries:
         title = entry.title
-        pub_date_raw = entry.published
-        event_time = parse_pubdate(pub_date_raw)
+        pub_date = entry.published
 
-        impact = determine_impact(title)
-        icon = ''
-	if impact == "High Impact":
-    	     icon = "RED"
-	elif impact == "Medium Impact":
-    	     icon = "ORANGE"
-	else:
-    	     icon = ""
+        # Extract impact from categories if available
+        impact = ""
+        for tag in entry.get("tags", []):
+            term = tag.get("term", "").lower()
+            if term == "high-impact":
+                impact = "High Impact"
+                break
+            elif term == "medium-impact":
+                impact = "Medium Impact"
 
-        date_str, time_str = format_datetime_et(event_time)
+        # Convert publication date to Eastern time
+        eastern_dt = convert_to_eastern(pub_date)
+        if eastern_dt is None:
+            continue
+        date_str = eastern_dt.strftime("%m/%d/%Y")
+        time_str = eastern_dt.strftime("%H:%M")
 
-        # One-line display with icon, title, and datetime in ET
-        output_line = f"{icon} {title} at {date_str} {time_str} ET"
-        print(output_line)
+        # Set impact color words for testing
+        if impact == "High Impact":
+            impact_display = "RED"
+        elif impact == "Medium Impact":
+            impact_display = "ORANGE"
+        else:
+            impact_display = ""
 
-        event_key = f"{title}::{date_str} {time_str}"
+        # Compose message line
+        message_line = f"{impact_display} {title} at {date_str} {time_str} ET".strip()
 
-        if is_within_next_60_minutes(event_time) and event_key not in posted_events:
-            # Telegram message same as output line
-            message = output_line
+        print(message_line)
+
+        # Only post if event is within next 60 minutes and not posted before
+        if is_within_next_30_minutes(pub_date) and title not in posted_events:
+            message = f"<b>{impact_display} {title}</b>\n{date_str} {time_str} ET"
             success = send_telegram_message(message)
             if success:
-                posted_events.add(event_key)
+                posted_events.add(title)
 
     save_posted_events(posted_events)
 
