@@ -1,69 +1,58 @@
 import feedparser
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-import pytz
+import json
+import datetime
 import requests
-
 import os
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+def parse_pub_date(pub_date_str):
+    from datetime import datetime
+    try:
+        # Try with seconds
+        return datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S %z")
+    except ValueError:
+        # Fallback to no seconds
+        return datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M %z")
 
-
-# --- CONFIGURATION ---
-URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
-IMPACT_KEYWORDS = [
-    'span class="sprite sprite-common sprite-high-impact',
-    'span class="sprite sprite-common sprite-medium-impact'
-]
-TELEGRAM_BOT_TOKEN = '7905949870:AAFS6bdEsNeu9UlN67kkc4E1yD34GzIApOU'
-TELEGRAM_CHAT_ID = '-2581194849'  # e.g., @myfxalerts or -1001234567890
-
-def is_within_30_minutes(pub_date_str):
-    pub_date = datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S %z")
-    now = datetime.now(pytz.utc)
-    return now <= pub_date <= now + timedelta(minutes=30)
+def is_within_30_minutes(pub_date):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    delta = abs((now - pub_date).total_seconds())
+    return delta <= 30 * 60  # 30 minutes in seconds
 
 def fetch_and_filter_events():
-    feed = feedparser.parse(URL)
+    feed_url = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
+    feed = feedparser.parse(feed_url)
     filtered_events = []
 
     for entry in feed.entries:
-        description = entry.get("description", "")
-        pub_date = entry.get("published", "")
-
-        if any(keyword in description for keyword in IMPACT_KEYWORDS):
+        if '<span class="sprite sprite-common sprite-high-impact">' in entry.summary:
+            pub_date = parse_pub_date(entry.published)
             if is_within_30_minutes(pub_date):
-                soup = BeautifulSoup(description, "html.parser")
-                text_description = soup.get_text()
                 filtered_events.append({
                     "title": entry.title,
-                    "time": pub_date,
-                    "description": text_description.strip()
+                    "published": pub_date.isoformat()
                 })
 
     return filtered_events
 
-def post_to_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message,
-        "parse_mode": "HTML"
-    }
-    response = requests.post(url, data=payload)
-    if not response.ok:
-        print(f"Failed to post to Telegram: {response.text}")
+def send_to_telegram(events):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        print("Telegram token or chat ID not set in environment variables.")
+        return
+
+    for event in events:
+        message = f"High Impact Event:\n{event['title']}\nTime: {event['published']}"
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = {"chat_id": chat_id, "text": message}
+        response = requests.post(url, data=data)
+        if response.status_code != 200:
+            print(f"Failed to send message: {response.text}")
 
 if __name__ == "__main__":
     events = fetch_and_filter_events()
     if events:
-        for event in events:
-            message = (
-                f"<b>{event['title']}</b>\n"
-                f"<i>{event['time']}</i>\n"
-                f"{event['description']}"
-            )
-            post_to_telegram(message)
+        send_to_telegram(events)
     else:
-        print("No high or medium impact events in the next 30 minutes.")
+        print("No high impact events within the last 30 minutes.")
