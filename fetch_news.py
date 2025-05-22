@@ -4,14 +4,20 @@ from datetime import datetime, timedelta
 import pytz
 import requests
 
+import os
+
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+
+
 # --- CONFIGURATION ---
 URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
 IMPACT_KEYWORDS = [
     'span class="sprite sprite-common sprite-high-impact',
     'span class="sprite sprite-common sprite-medium-impact'
 ]
-TELEGRAM_BOT_TOKEN = 'your_bot_token_here'
-TELEGRAM_CHAT_ID = '@your_channel_username_or_chat_id'  # e.g., @myfxalerts or -1001234567890
+TELEGRAM_BOT_TOKEN = '7905949870:AAFS6bdEsNeu9UlN67kkc4E1yD34GzIApOU'
+TELEGRAM_CHAT_ID = '-2581194849'  # e.g., @myfxalerts or -1001234567890
 
 def is_within_30_minutes(pub_date_str):
     pub_date = datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S %z")
