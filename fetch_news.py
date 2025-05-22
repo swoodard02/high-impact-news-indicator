@@ -32,7 +32,7 @@ def is_within_next_60_minutes(event_time_str):
         now = datetime.now(pytz.UTC)
         diff = event_time - now
         print(f"Event time: {event_time}, Now: {now}, Diff: {diff}")
-        return timedelta(0) <= diff <= timedelta(minutes=60)
+        return timedelta(0) <= diff <= timedelta(minutes=180)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
@@ -41,7 +41,7 @@ def get_impact_from_tags(tags):
         term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
         if 'sprite-high-impact' in term:
             return "High Impact"
-        if 'sprite-medium-impact' in term:
+        if 'sprite-low-impact' in term:
             return "Medium Impact"
     return "Low Impact"
 
