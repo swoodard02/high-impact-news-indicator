@@ -25,23 +25,25 @@ def save_posted_events(posted):
 
 def is_within_next_60_minutes(event_time_str):
     try:
+        # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
+
+        # Assume UTC since the feed says GMT
         event_time = pytz.UTC.localize(event_time)
 
         now = datetime.now(pytz.UTC)
-        diff = event_time - now
-        print(f"Event time: {event_time}, Now: {now}, Diff: {diff}")
-        return timedelta(0) <= diff <= timedelta(minutes=180)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=60)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
+
 def get_impact_from_tags(tags):
     for tag in tags:
         term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
         if 'sprite-high-impact' in term:
             return "High Impact"
-        if 'sprite-low-impact' in term:
+        if 'sprite-medium-impact' in term:
             return "Medium Impact"
     return "Low Impact"
 
@@ -69,10 +71,6 @@ def fetch_and_post_events():
 
         impact = get_impact_from_tags(tags)
 
-        # Skip low impact events
-        if impact == "Low Impact":
-            continue
-
         # Parse event time and convert to Eastern
         try:
             event_time_utc = datetime.strptime(pub_date.replace(" GMT", ""), '%a, %d %b %Y %H:%M')
@@ -83,14 +81,14 @@ def fetch_and_post_events():
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
 
-        # Select emoji by impact
-        impact_emoji = ""
+        # Assign icon based on impact level
+        icon = "⚪"  # Low Impact
         if impact == "High Impact":
-            impact_emoji = "🔴"
+            icon = "🔴"
         elif impact == "Medium Impact":
-            impact_emoji = "🟠"
+            icon = "🟠"
 
-        message = f"{impact_emoji} <b>{title}</b> at {event_time_str}"
+        message = f"{icon} <b>{title}</b> at {event_time_str}"
 
         if is_within_next_60_minutes(pub_date) and title not in posted_events:
             print(f"Posting event: {message}")
@@ -108,4 +106,5 @@ def send_test_message():
 if __name__ == "__main__":
     # send_test_message()
     fetch_and_post_events()
+
 
