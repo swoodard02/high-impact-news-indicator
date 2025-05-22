@@ -26,7 +26,7 @@ def is_within_next_30_minutes(event_time_str):
         event_time = datetime.strptime(event_time_str, "%a, %d %b %Y %H:%M:%S %Z")
         event_time = event_time.replace(tzinfo=pytz.UTC)
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=30)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=75)
     except ValueError:
         return False
 
@@ -64,8 +64,8 @@ def send_test_message():
 
 
 if __name__ == "__main__":
-    send_test_message()
-    # fetch_and_post_events()  # Comment this out temporarily if needed
+    #send_test_message()
+    fetch_and_post_events()  # Comment this out temporarily if needed
 
 
 
