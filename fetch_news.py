@@ -1,58 +1,58 @@
 import feedparser
-import json
-import datetime
+from datetime import datetime, timezone
+import pytz
 import requests
+from bs4 import BeautifulSoup
 import os
 
 def parse_pub_date(pub_date_str):
-    from datetime import datetime
     try:
-        # Try with seconds
+        # Try parsing with seconds
         return datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S %z")
     except ValueError:
-        # Fallback to no seconds
+        # Fallback to parsing without seconds
         return datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M %z")
 
 def is_within_30_minutes(pub_date):
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.now(timezone.utc)
     delta = abs((now - pub_date).total_seconds())
-    return delta <= 30 * 60  # 30 minutes in seconds
+    return delta <= 30 * 60  # 30 minutes
 
 def fetch_and_filter_events():
-    feed_url = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
-    feed = feedparser.parse(feed_url)
+    url = 'https://www.forexfactory.com/ffcal_week_this.xml'
+    feed = feedparser.parse(url)
+
     filtered_events = []
 
     for entry in feed.entries:
+        # Check if event is marked as high impact
         if '<span class="sprite sprite-common sprite-high-impact">' in entry.summary:
             pub_date = parse_pub_date(entry.published)
             if is_within_30_minutes(pub_date):
                 filtered_events.append({
-                    "title": entry.title,
-                    "published": pub_date.isoformat()
+                    'title': entry.title,
+                    'link': entry.link,
+                    'published': entry.published,
                 })
 
     return filtered_events
 
-def send_to_telegram(events):
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+def send_telegram_message(token, chat_id, message):
+    url = f'https://api.telegram.org/bot{token}/sendMessage'
+    payload = {
+        'chat_id': chat_id,
+        'text': message,
+        'parse_mode': 'HTML',
+    }
+    response = requests.post(url, data=payload)
+    return response.json()
 
-    if not token or not chat_id:
-        print("Telegram token or chat ID not set in environment variables.")
-        return
-
-    for event in events:
-        message = f"High Impact Event:\n{event['title']}\nTime: {event['published']}"
-        url = f"https://api.telegram.org/bot{token}/sendMessage"
-        data = {"chat_id": chat_id, "text": message}
-        response = requests.post(url, data=data)
-        if response.status_code != 200:
-            print(f"Failed to send message: {response.text}")
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     events = fetch_and_filter_events()
     if events:
-        send_to_telegram(events)
-    else:
-        print("No high impact events within the last 30 minutes.")
+        token = os.getenv('TELEGRAM_BOT_TOKEN')
+        chat_id = os.getenv('TELEGRAM_CHAT_ID')
+        for event in events:
+            message = f"<b>{event['title']}</b>\nPublished: {event['published']}\nLink: {event['link']}"
+            send_telegram_message(token, chat_id, message)
+
