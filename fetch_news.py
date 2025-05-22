@@ -33,7 +33,7 @@ def is_within_next_60_minutes(event_time_str):
         event_time = pytz.UTC.localize(event_time)
 
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=300)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=360)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
