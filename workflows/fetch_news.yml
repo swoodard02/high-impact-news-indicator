@@ -2,8 +2,8 @@ name: Fetch and Post News
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Runs every 5 minutes
-  workflow_dispatch:       # Allows manual triggering
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-script:
@@ -21,6 +21,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Print fetch_news.py contents (Debug)
+        run: cat fetch_news.py
 
       - name: Run fetch_news.py
         run: python fetch_news.py
