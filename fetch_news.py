@@ -45,10 +45,16 @@ def fetch_and_post_events():
     feed = feedparser.parse(FEED_URL)
     posted_events = load_posted_events()
 
+    print(f"Fetched {len(feed.entries)} entries from RSS feed.")
+
     for entry in feed.entries:
         title = entry.title
         pub_date = entry.published
+        print(f"Title: {title} | Published: {pub_date}")
 
+        if is_within_next_30_minutes(pub_date):
+            print(f"⏰ Event within 60 minutes: {title}")
+        
         if is_within_next_30_minutes(pub_date) and title not in posted_events:
             message = f"<b>{title}</b>\n{entry.link}"
             success = send_telegram_message(message)
