@@ -23,11 +23,8 @@ def save_posted_events(posted):
 
 def is_within_next_30_minutes(event_time_str):
     try:
-        # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
-
-        # Assume UTC since the feed says GMT
         event_time = pytz.UTC.localize(event_time)
 
         now = datetime.now(pytz.UTC)
@@ -71,25 +68,27 @@ def fetch_and_post_events():
         title = entry.title
         pub_date = entry.published
 
-        # Determine impact emoji
+        # Determine impact color text instead of emoji
         impact = ""
         for tag in entry.get("tags", []):
             term = tag.get("term", "").lower()
             if term == "high-impact":
-                impact = "🔴"
+                impact = "red"
                 break
             elif term == "medium-impact":
-                impact = "🟠"
+                impact = "orange"
 
-        # Convert published date to Eastern time
         eastern_dt = convert_to_eastern(pub_date)
         if eastern_dt is None:
             continue
         date_str = eastern_dt.strftime("%m/%d/%Y")
         time_str = eastern_dt.strftime("%H:%M")
 
-        # Compose the message with impact emoji outside bold tags
-        message = f"{impact} <b>{title}</b>\n{date_str} {time_str} ET"
+        # Compose message with impact color text
+        if impact:
+            message = f"{impact} <b>{title}</b>\n{date_str} {time_str} ET"
+        else:
+            message = f"<b>{title}</b>\n{date_str} {time_str} ET"
 
         print(f"{impact} {title} at {date_str} {time_str} ET")
 
@@ -108,6 +107,5 @@ def send_test_message():
 if __name__ == "__main__":
     # send_test_message()
     fetch_and_post_events()
-
 
 
