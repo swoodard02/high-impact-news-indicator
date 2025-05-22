@@ -25,19 +25,17 @@ def save_posted_events(posted):
 
 def is_within_next_60_minutes(event_time_str):
     try:
-        # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
-
-        # Assume UTC since the feed says GMT
         event_time = pytz.UTC.localize(event_time)
 
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=360)
+        diff = event_time - now
+        print(f"Event time: {event_time}, Now: {now}, Diff: {diff}")
+        return timedelta(0) <= diff <= timedelta(minutes=360)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
-
 def get_impact_from_tags(tags):
     for tag in tags:
         term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
