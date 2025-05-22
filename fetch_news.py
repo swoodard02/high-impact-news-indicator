@@ -21,14 +21,21 @@ def save_posted_events(posted):
     with open(POSTED_EVENTS_FILE, "w") as f:
         json.dump(list(posted), f)
 
-def is_within_next_30_minutes(event_time_str):
+def is_within_next_60_minutes(event_time_str):
     try:
-        event_time = datetime.strptime(event_time_str, "%a, %d %b %Y %H:%M:%S %Z")
-        event_time = event_time.replace(tzinfo=pytz.UTC)
+        # Strip GMT and parse as naive datetime
+        event_time_str = event_time_str.replace(" GMT", "")
+        event_time = datetime.strptime(event_time_str, "%a, %d %b %Y %H:%M:%S")
+
+        # Assume UTC since the feed says GMT
+        event_time = pytz.UTC.localize(event_time)
+
         now = datetime.now(pytz.UTC)
         return timedelta(0) <= (event_time - now) <= timedelta(minutes=60)
-    except ValueError:
+    except Exception as e:
+        print(f"Time parsing error: {e}")
         return False
+
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
