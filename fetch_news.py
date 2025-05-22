@@ -21,7 +21,7 @@ def save_posted_events(posted):
     with open(POSTED_EVENTS_FILE, "w") as f:
         json.dump(list(posted), f)
 
-def is_within_next_60_minutes(event_time_str):
+def is_within_next_30_minutes(event_time_str):
     try:
         # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
