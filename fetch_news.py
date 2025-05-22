@@ -25,7 +25,7 @@ def is_within_next_30_minutes(event_time_str):
     try:
         # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
-        event_time = datetime.strptime(event_time_str, "%a, %d %b %Y %H:%M:%S")
+        event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
 
         # Assume UTC since the feed says GMT
         event_time = pytz.UTC.localize(event_time)
