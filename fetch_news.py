@@ -95,10 +95,12 @@ def fetch_and_post_events():
 
         impact = determine_impact(title)
         icon = ''
-        if impact == 'High Impact':
-            icon = '🔴'
-        elif impact == 'Medium Impact':
-            icon = '🟠'
+	if impact == "High Impact":
+    	     icon = "RED"
+	elif impact == "Medium Impact":
+    	     icon = "ORANGE"
+	else:
+    	     icon = ""
 
         date_str, time_str = format_datetime_et(event_time)
 
