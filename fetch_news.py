@@ -71,6 +71,10 @@ def fetch_and_post_events():
 
         impact = get_impact_from_tags(tags)
 
+        # Skip low impact events
+        if impact == "Low Impact":
+            continue
+
         # Parse event time and convert to Eastern
         try:
             event_time_utc = datetime.strptime(pub_date.replace(" GMT", ""), '%a, %d %b %Y %H:%M')
@@ -81,14 +85,12 @@ def fetch_and_post_events():
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
 
-        # Use emojis for impact instead of text color
+        # Select emoji by impact
         impact_emoji = ""
         if impact == "High Impact":
             impact_emoji = "🔴"
         elif impact == "Medium Impact":
             impact_emoji = "🟠"
-        else:
-            impact_emoji = "⚪"
 
         message = f"{impact_emoji} <b>{title}</b> at {event_time_str}"
 
@@ -108,5 +110,4 @@ def send_test_message():
 if __name__ == "__main__":
     # send_test_message()
     fetch_and_post_events()
-
 
