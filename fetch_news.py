@@ -5,7 +5,7 @@ import os
 import requests
 import json
 
-FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.xml"
+FEED_URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
 POSTED_EVENTS_FILE = "posted_events.json"
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
