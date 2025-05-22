@@ -11,8 +11,6 @@ POSTED_EVENTS_FILE = "posted_events.json"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-EASTERN = pytz.timezone("US/Eastern")
-
 def load_posted_events():
     if os.path.exists(POSTED_EVENTS_FILE):
         with open(POSTED_EVENTS_FILE, "r") as f:
@@ -42,9 +40,12 @@ def convert_to_eastern(event_time_str):
     try:
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
-        event_time = pytz.UTC.localize(event_time)
-        eastern_time = event_time.astimezone(EASTERN)
-        return eastern_time
+        event_time_utc = pytz.UTC.localize(event_time)
+
+        eastern = pytz.timezone("US/Eastern")
+        event_time_eastern = event_time_utc.astimezone(eastern)
+
+        return event_time_eastern
     except Exception as e:
         print(f"Time conversion error: {e}")
         return None
@@ -70,39 +71,29 @@ def fetch_and_post_events():
         title = entry.title
         pub_date = entry.published
 
-        # Extract impact from categories if available
+        # Determine impact emoji
         impact = ""
         for tag in entry.get("tags", []):
             term = tag.get("term", "").lower()
             if term == "high-impact":
-                impact = "High Impact"
+                impact = "🔴"
                 break
             elif term == "medium-impact":
-                impact = "Medium Impact"
+                impact = "🟠"
 
-        # Convert publication date to Eastern time
+        # Convert published date to Eastern time
         eastern_dt = convert_to_eastern(pub_date)
         if eastern_dt is None:
             continue
         date_str = eastern_dt.strftime("%m/%d/%Y")
         time_str = eastern_dt.strftime("%H:%M")
 
-        # Set impact color words for testing
-        if impact == "High Impact":
-            impact_display = "RED"
-        elif impact == "Medium Impact":
-            impact_display = "ORANGE"
-        else:
-            impact_display = ""
+        # Compose the message with impact emoji outside bold tags
+        message = f"{impact} <b>{title}</b>\n{date_str} {time_str} ET"
 
-        # Compose message line
-        message_line = f"{impact_display} {title} at {date_str} {time_str} ET".strip()
+        print(f"{impact} {title} at {date_str} {time_str} ET")
 
-        print(message_line)
-
-        # Only post if event is within next 60 minutes and not posted before
         if is_within_next_30_minutes(pub_date) and title not in posted_events:
-            message = f"<b>{impact_display} {title}</b>\n{date_str} {time_str} ET"
             success = send_telegram_message(message)
             if success:
                 posted_events.add(title)
@@ -115,7 +106,7 @@ def send_test_message():
     print("Test message sent!" if success else "Failed to send test message.")
 
 if __name__ == "__main__":
-    #send_test_message()
+    # send_test_message()
     fetch_and_post_events()
 
 
