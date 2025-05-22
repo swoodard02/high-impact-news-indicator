@@ -58,5 +58,10 @@ def fetch_and_post_events():
     save_posted_events(posted_events)
 
 if __name__ == "__main__":
-    fetch_and_post_events()
+    send_test_message()
+    #fetch_and_post_events()
 
+def send_test_message():
+    test_message = "<b>✅ Test Alert:</b> This is a test message from your bot."
+    success = send_telegram_message(test_message)
+    print("Test message sent!" if success else "Failed to send test message.")
