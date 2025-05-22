@@ -62,7 +62,10 @@ def send_test_message():
     success = send_telegram_message(test_message)
     print("Test message sent!" if success else "Failed to send test message.")
 
+
 if __name__ == "__main__":
     send_test_message()
-    #fetch_and_post_events()
+    # fetch_and_post_events()  # Comment this out temporarily if needed
+
+
 
