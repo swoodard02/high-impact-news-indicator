@@ -81,6 +81,7 @@ def send_telegram_message(message):
         print(f"Failed to send telegram message: {e}")
         return False
 
+
 def fetch_and_post_events():
     feed = feedparser.parse(FEED_URL)
     posted_events = load_posted_events()
