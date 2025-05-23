@@ -71,7 +71,7 @@ def is_within_next_30_minutes(event_time_str):
 def get_impact_from_description(description_html):
     soup = BeautifulSoup(description_html, 'html.parser')
     span = soup.find("span", class_="sprite")
-    if span and 'sprite-low-impact' in span.get('class', []):
+    if span and 'sprite-high-impact' in span.get('class', []):
         return "High Impact"
     if span and 'sprite-medium-impact' in span.get('class', []):
         return "Medium Impact"
