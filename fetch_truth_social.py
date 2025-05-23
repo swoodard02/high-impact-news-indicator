@@ -11,15 +11,15 @@ TELEGRAM_CHAT_ID = "@tsvipform"
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 POSTED_LOG = "posted_truths.json"
-LOOKBACK_WINDOW = timedelta(minutes=5)
+POST_WINDOW = timedelta(minutes=5)
 
-def load_posted_titles():
+def load_posted_truths():
     if os.path.exists(POSTED_LOG):
         with open(POSTED_LOG, "r") as f:
             return json.load(f)
     return {}
 
-def save_posted_titles(data):
+def save_posted_truths(data):
     with open(POSTED_LOG, "w") as f:
         json.dump(data, f)
 
@@ -34,52 +34,61 @@ def send_telegram_message(message):
     print(f"Telegram response: {response.status_code} - {response.text}")
     return response.ok
 
-def fetch_and_post_recent_truths():
+def fetch_and_post_truths():
     feed = feedparser.parse(FEED_URL)
-    posted_titles = load_posted_titles()
+    posted_truths = load_posted_truths()
     now_utc = datetime.now(pytz.UTC)
-    now_et = now_utc.astimezone(EASTERN_TZ)
 
     print(f"Fetched {len(feed.entries)} entries.")
-    updated_titles = {}
+
+    updated_truths = {}
 
     for entry in feed.entries:
-        title = entry.title.strip()
+        # Safely extract and clean title
+        raw_title = entry.get("title", "").strip()
+        if raw_title.startswith("<![CDATA[") and raw_title.endswith("]]>"):
+            title = raw_title[9:-3].strip()
+        else:
+            title = raw_title
 
-        if "[No Title]" in title:
-            print(f"Skipping entry with no title: {title}")
+        # Skip if title is empty or a placeholder
+        if "[No Title]" in title or title == "":
+            print(f"Skipping entry with no valid title: {title}")
             continue
 
-        # Parse published time
+        # Parse publish date
         published = entry.get("published", "")
         try:
-            published_dt = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %z")
+            dt_utc = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %z")
         except Exception as e:
-            print(f"Skipping due to time parsing error: {e}")
+            print(f"Failed to parse date for '{title}': {e}")
             continue
 
-        # Only allow posts published in the last 5 minutes
-        if now_utc - published_dt > LOOKBACK_WINDOW:
+        # Check if post is recent (within last 5 minutes)
+        if now_utc - dt_utc > POST_WINDOW:
             continue
 
-        # Check if already posted
-        if title in posted_titles:
-            print(f"Skipping already posted: {title}")
-            continue
+        # Check if already posted today
+        posted_time_str = posted_truths.get(title)
+        if posted_time_str:
+            posted_dt = datetime.fromisoformat(posted_time_str)
+            if posted_dt.date() == now_utc.date():
+                print(f"Already posted today: {title}")
+                continue
 
-        # Format time string
-        post_time_et = published_dt.astimezone(EASTERN_TZ)
-        time_str = post_time_et.strftime("%I:%M %p ET")
+        # Format time string (Eastern Time)
+        dt_et = dt_utc.astimezone(EASTERN_TZ)
+        time_str = dt_et.strftime("%I:%M %p ET").lstrip("0")
 
+        # Send to Telegram
         message = f"🧑‍🦱 <b>{title}</b>\n{time_str}"
         print(f"Posting: {message}")
         if send_telegram_message(message):
-            updated_titles[title] = now_et.isoformat()
+            updated_truths[title] = now_utc.isoformat()
 
-    # Save posted titles
-    posted_titles.update(updated_titles)
-    save_posted_titles(posted_titles)
+    # Update log
+    posted_truths.update(updated_truths)
+    save_posted_truths(posted_truths)
 
 if __name__ == "__main__":
-    fetch_and_post_recent_truths()
-
+    fetch_and_post_truths()
