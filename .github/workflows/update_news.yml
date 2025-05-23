@@ -2,7 +2,7 @@ name: Update News
 
 on:
   schedule:
-    - cron: '0 * * * *'  # runs every hour
+    - cron: '*/30 * * * *'  # runs every hour
   workflow_dispatch:
 
 jobs:
