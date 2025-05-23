@@ -79,7 +79,8 @@ def fetch_and_post_truths():
             continue
 
         age = now_utc - dt_utc
-        print(f"Entry age (seconds): {age.total_seconds()}")
+	age_minutes = age.total_seconds() / 60
+	print(f"Entry age (minutes): {age_minutes:.2f}")
 
         if age > POST_WINDOW:
             print("Skipped: older than 5 minutes")
