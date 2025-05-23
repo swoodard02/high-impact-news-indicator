@@ -3,6 +3,8 @@ import requests
 from bs4 import BeautifulSoup
 from telegram import Bot
 from dotenv import load_dotenv
+load_dotenv()
+
 
 # Load environment variables from a .env file (optional for local development)
 load_dotenv()
