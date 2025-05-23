@@ -24,13 +24,13 @@ def save_posted_events(posted):
     with open(POSTED_EVENTS_FILE, "w") as f:
         json.dump(list(posted), f)
 
-def is_within_next_1440_minutes(event_time_str):
+def is_within_next_30_minutes(event_time_str):
     try:
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
         event_time = pytz.UTC.localize(event_time)
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=30)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
@@ -72,7 +72,7 @@ def fetch_and_post_events():
         impact = get_impact_from_description(description)
         print(f"Event: {title} | Impact: {impact} | Published: {pub_date}")
 
-        if not is_within_next_1440_minutes(pub_date):
+        if not is_within_next_30_minutes(pub_date):
             print(f"Skipping '{title}' due to time check.")
             continue
 
@@ -99,7 +99,7 @@ def fetch_and_post_events():
         posted_events.add(title)
 
     if events_to_post:
-        full_message = "<b>🗓 Upcoming Economic Events (Next 24h):</b>\n\n" + "\n".join(events_to_post)
+        full_message = "<b>🗓 Upcoming Economic Events (Next 30 Minutes):</b>\n\n" + "\n".join(events_to_post)
         print(f"Posting events:\n{full_message}")
         success = send_telegram_message(full_message)
         if success:
