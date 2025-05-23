@@ -47,7 +47,7 @@ def fetch_and_post_truths():
     for entry in feed.entries:
         title = entry.title.strip()
 
-        if title == "[No Title]":
+        if "[No Title]" in title:
             print(f"Skipping entry with no title.")
             continue
 
