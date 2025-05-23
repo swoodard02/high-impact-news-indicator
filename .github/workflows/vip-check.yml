@@ -1,34 +1,31 @@
-name: Check Topstep VIP Form
+name: VIP Form Checker
 
 on:
   schedule:
-    - cron: "*/30 * * * *"  # Every 30 minutes
-  workflow_dispatch:       # Allow manual triggering
+    - cron: '*/5 * * * *'  # Runs every 5 minutes
+  workflow_dispatch:       # Allows manual triggering
 
 jobs:
-  check-vip-form:
+  run-script:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 python-telegram-bot
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytz feedparser requests
 
-      - name: Run script
+      - name: Run VIP form checker
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID2 }}
         run: python check_vip_form.py
 
-      - name: Commit status file
-        run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
-          git add status.txt
-          git commit -m "Update status file" || echo "No changes to commit"
-          git push
