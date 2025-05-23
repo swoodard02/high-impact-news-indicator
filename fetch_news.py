@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os
 import requests
 import json
+import time
 
 FEED_URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
 POSTED_EVENTS_FILE = "posted_events.json"
@@ -34,15 +35,15 @@ def is_within_next_1440_minutes(event_time_str):
         print(f"Time parsing error: {e}")
         return False
 
-def get_impact_from_tags(tags):
-    for tag in tags:
-        print(f"Raw tag: {tag}")  # DEBUG print to inspect tag format
-        term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
-        if 'sprite-high-impact' in term:
-            return "High Impact"
-        if 'sprite-medium-impact' in term:
-            return "Medium Impact"
-    return "Low Impact"
+def get_impact_from_description(description):
+    """Search for impact class in the HTML from description"""
+    if "sprite-high-impact" in description:
+        return "High Impact"
+    elif "sprite-medium-impact" in description:
+        return "Medium Impact"
+    elif "sprite-low-impact" in description:
+        return "Low Impact"
+    return "Unknown"
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -64,16 +65,14 @@ def fetch_and_post_events():
     for entry in feed.entries:
         title = entry.title
         pub_date = entry.published
-        tags = entry.get('tags', [])
+        description = entry.get("description", "")
 
-        print(f"\nTags for '{title}': {tags}")  # DEBUG line to see tag structure
+        impact = get_impact_from_description(description)
 
-        # Get impact level (temporarily override to force test)
-        impact = get_impact_from_tags(tags)
-        # Uncomment the next line to force High Impact for all:
-        # impact = "High Impact"
+        print(f"\nEvent: {title}")
+        print(f"Impact: {impact}")
+        print(f"Description snippet: {description[:80]}...")
 
-        # Parse event time and convert to Eastern
         try:
             event_time_utc = datetime.strptime(pub_date.replace(" GMT", ""), '%a, %d %b %Y %H:%M')
             event_time_utc = pytz.UTC.localize(event_time_utc)
@@ -83,23 +82,29 @@ def fetch_and_post_events():
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
 
-        # Compose color emoji based on impact
-        if impact == "High Impact":
-            emoji = "🔴"
-        elif impact == "Medium Impact":
-            emoji = "🟠"
-        else:
-            emoji = "⚪"
+        if title in posted_events:
+            print(f"Already posted: {title}")
+            continue
 
-        message = f"{emoji} <b>{title}</b> at {event_time_str}"
-
-        # Skip posted check for testing
         if is_within_next_1440_minutes(pub_date):
-            print(f"Posting event: {message}")
-            send_telegram_message(message)
+            # Use emoji
+            if impact == "High Impact":
+                emoji = "🔴"
+            elif impact == "Medium Impact":
+                emoji = "🟠"
+            elif impact == "Low Impact":
+                emoji = "⚪"
+            else:
+                emoji = "⚪"
 
-    # Optionally comment out to avoid saving during test
-    # save_posted_events(posted_events)
+            message = f"{emoji} <b>{title}</b> at {event_time_str}"
+            print(f"Posting event: {message}")
+
+            if send_telegram_message(message):
+                posted_events.add(title)
+                time.sleep(1.5)  # Avoid hitting rate limits
+
+    save_posted_events(posted_events)
 
 if __name__ == "__main__":
     fetch_and_post_events()
