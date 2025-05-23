@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os
 import requests
 import json
+from bs4 import BeautifulSoup
 
 FEED_URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
 POSTED_EVENTS_FILE = "posted_events.json"
@@ -25,28 +26,23 @@ def save_posted_events(posted):
 
 def is_within_next_1440_minutes(event_time_str):
     try:
-        # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
-
-        # Assume UTC since the feed says GMT
         event_time = pytz.UTC.localize(event_time)
-
         now = datetime.now(pytz.UTC)
         return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
 
-def get_impact_from_tags(tags):
-    # tags is a list of dicts or strings
-    for tag in tags:
-        # tag can be dict with 'term' or string
-        term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
-        if 'sprite-high-impact' in term:
-            return "High Impact"
-        if 'sprite-medium-impact' in term:
-            return "Medium Impact"
+def get_impact_from_description(description_html):
+    # Parse description HTML and find span with impact class
+    soup = BeautifulSoup(description_html, 'html.parser')
+    span = soup.find("span", class_="sprite")
+    if span and 'sprite-high-impact' in span.get('class', []):
+        return "High Impact"
+    if span and 'sprite-medium-impact' in span.get('class', []):
+        return "Medium Impact"
     return "Low Impact"
 
 def send_telegram_message(message):
@@ -71,10 +67,10 @@ def fetch_and_post_events():
     for entry in feed.entries:
         title = entry.title
         pub_date = entry.published
-        tags = entry.get('tags', [])
+        description = entry.get('description', '')
 
-        impact = get_impact_from_tags(tags)
-        print(f"Event: {title} | Impact: {impact} | Published: {pub_date} | Tags: {tags}")
+        impact = get_impact_from_description(description)
+        print(f"Event: {title} | Impact: {impact} | Published: {pub_date}")
 
         if not is_within_next_1440_minutes(pub_date):
             print(f"Skipping '{title}' due to time check.")
