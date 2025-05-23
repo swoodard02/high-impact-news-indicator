@@ -14,6 +14,38 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 
+# Country slug-to-code mapping
+COUNTRY_CODES = {
+    "united-states": "US",
+    "canada": "CA",
+    "united-kingdom": "GB",
+    "euro-area": "EU",
+    "japan": "JP",
+    "australia": "AU",
+    "new-zealand": "NZ",
+    "china": "CN",
+    "germany": "DE",
+    "france": "FR",
+    "italy": "IT",
+    "mexico": "MX",
+    "brazil": "BR",
+    "russia": "RU",
+    "india": "IN",
+    "south-korea": "KR",
+    "switzerland": "CH",
+    "sweden": "SE",
+    "norway": "NO",
+    "denmark": "DK",
+    "hong-kong": "HK",
+    "singapore": "SG",
+    "paraguay": "PY",
+    "peru": "PE",
+    "hungary": "HU",
+    "poland": "PL",
+    "turkey": "TR",
+    # Add more as needed
+}
+
 def load_posted_events():
     if os.path.exists(POSTED_EVENTS_FILE):
         with open(POSTED_EVENTS_FILE, "r") as f:
@@ -36,14 +68,33 @@ def is_within_next_30_minutes(event_time_str):
         return False
 
 def get_impact_from_description(description_html):
-    # Parse description HTML and find span with impact class
     soup = BeautifulSoup(description_html, 'html.parser')
     span = soup.find("span", class_="sprite")
-    if span and 'sprite-high-impact' in span.get('class', []):
+    if span and 'sprite-low-impact' in span.get('class', []):
         return "High Impact"
     if span and 'sprite-medium-impact' in span.get('class', []):
         return "Medium Impact"
     return "Low Impact"
+
+def country_code_to_emoji(code):
+    if not code or len(code) != 2:
+        return ""
+    return chr(ord(code[0].upper()) + 127397) + chr(ord(code[1].upper()) + 127397)
+
+def extract_country_and_flag(link):
+    try:
+        parts = link.strip("/").split("/")
+        if "forex-economic-calendar" in parts:
+            idx = parts.index("forex-economic-calendar")
+            if len(parts) > idx + 1:
+                slug = parts[idx + 1].lower()
+                country_name = slug.replace("-", " ").title()
+                iso_code = COUNTRY_CODES.get(slug)
+                flag = country_code_to_emoji(iso_code) if iso_code else ""
+                return flag, country_name
+    except Exception as e:
+        print(f"Error extracting country from link '{link}': {e}")
+    return "", "Unknown"
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -68,6 +119,7 @@ def fetch_and_post_events():
         title = entry.title
         pub_date = entry.published
         description = entry.get('description', '')
+        link = entry.link
 
         impact = get_impact_from_description(description)
         print(f"Event: {title} | Impact: {impact} | Published: {pub_date}")
@@ -93,13 +145,14 @@ def fetch_and_post_events():
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
 
+        flag, country = extract_country_and_flag(link)
         emoji = "🔴" if impact == "High Impact" else "🟠"
-        event_line = f"{emoji} <b>{title}</b>  -  {event_time_str}"
+        event_line = f"{emoji} {flag} <b>{country}: {title}</b>  -  {event_time_str}"
         events_to_post.append(event_line)
         posted_events.add(title)
 
     if events_to_post:
-        full_message = "<b>🗓 Upcoming Economic Events (Next 30 Minutes):</b>\n\n" + "\n".join(events_to_post)
+        full_message = "<b>🗓 Upcoming Economic Events (Within 30 Minutes):</b>\n\n" + "\n".join(events_to_post)
         print(f"Posting events:\n{full_message}")
         success = send_telegram_message(full_message)
         if success:
