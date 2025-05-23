@@ -43,8 +43,9 @@ COUNTRY_CODES = {
     "hungary": "HU",
     "poland": "PL",
     "turkey": "TR",
-    # Add more as needed
+    "nigeria": "NG",  # ✅ Add this line
 }
+
 
 def load_posted_events():
     if os.path.exists(POSTED_EVENTS_FILE):
