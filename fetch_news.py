@@ -148,7 +148,7 @@ def fetch_and_post_events():
 
         flag, country = extract_country_and_flag(link)
         emoji = "🔴" if impact == "High Impact" else "🟠"
-        event_line = f"{emoji} {flag} <b> {title}</b>  -  {event_time_str}"
+        event_line = f"{emoji}  {flag} <b> {title}</b>  -  {event_time_str}"
         events_to_post.append(event_line)
         posted_events.add(title)
 
