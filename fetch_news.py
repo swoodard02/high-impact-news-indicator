@@ -30,7 +30,7 @@ def is_within_next_30_minutes(event_time_str):
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
         event_time = pytz.UTC.localize(event_time)
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=30)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
