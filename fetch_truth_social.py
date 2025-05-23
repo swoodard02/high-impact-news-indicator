@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os
 import requests
 import json
+import re
 
 FEED_URL = "https://trumpstruth.org/feed"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -34,6 +35,11 @@ def send_telegram_message(message):
     print(f"Telegram response: {response.status_code} - {response.text}")
     return response.ok
 
+def clean_html(raw_html):
+    cleanr = re.compile('<.*?>')
+    cleantext = re.sub(cleanr, '', raw_html)
+    return cleantext.strip()
+
 def fetch_and_post_truths():
     feed = feedparser.parse(FEED_URL)
     posted_truths = load_posted_truths()
@@ -44,17 +50,21 @@ def fetch_and_post_truths():
     updated_truths = {}
 
     for entry in feed.entries:
-        # Safely extract and clean title
         raw_title = entry.get("title", "").strip()
         if raw_title.startswith("<![CDATA[") and raw_title.endswith("]]>"):
             title = raw_title[9:-3].strip()
         else:
             title = raw_title
 
-        # Skip if title is empty or a placeholder
+        # Handle [No Title] entries by using description or link as fallback
         if "[No Title]" in title or title == "":
-            print(f"Skipping entry with no valid title: {title}")
-            continue
+            description = entry.get("description", "").strip()
+            if description.startswith("<![CDATA[") and description.endswith("]]>"):
+                description = description[9:-3].strip()
+            fallback_text = clean_html(description)
+            if not fallback_text:
+                fallback_text = entry.get("link", "No content available")
+            title = f"(No Title) {fallback_text}"
 
         # Parse publish date
         published = entry.get("published", "")
@@ -92,3 +102,4 @@ def fetch_and_post_truths():
 
 if __name__ == "__main__":
     fetch_and_post_truths()
+
