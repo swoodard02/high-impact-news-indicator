@@ -2,72 +2,44 @@ import requests
 from bs4 import BeautifulSoup
 from telegram import Bot
 import os
-import json
-from datetime import datetime
-import pytz
 
-# Configuration
+# Telegram bot token and chat ID from GitHub secrets or environment variables
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID2")
+
 URL = "https://www.topstep.tv/topstepvip/"
-TARGET_TEXT = "THE VIP CHECK-IN FORM IS CURRENTLY CLOSED."
-STATUS_FILE = "status.json"
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-
-# Eastern Time Zone
-eastern = pytz.timezone("US/Eastern")
-
-def is_vip_form_closed():
-    try:
-        response = requests.get(URL)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        return TARGET_TEXT in soup.get_text().upper()
-    except Exception as e:
-        print(f"Error checking the site: {e}")
-        return None
-
-def get_daypart():
-    now_et = datetime.now(eastern)
-    hour = now_et.hour
-    return "morning" if 6 <= hour < 18 else "night"
-
-def load_status():
-    if os.path.exists(STATUS_FILE):
-        with open(STATUS_FILE, "r") as f:
-            return json.load(f)
-    return {"last_status": "closed", "last_alert_daypart": None}
-
-def save_status(status_data):
-    with open(STATUS_FILE, "w") as f:
-        json.dump(status_data, f)
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+}
 
 def send_telegram_message(message):
-    bot = Bot(token=TELEGRAM_TOKEN)
-    bot.send_message(chat_id=CHAT_ID, text=message)
-
-def main():
-    current_closed = is_vip_form_closed()
-    if current_closed is None:
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Telegram credentials are missing.")
         return
 
-    current_status = "closed" if current_closed else "open"
-    status_data = load_status()
-    current_daypart = get_daypart()
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    try:
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode="HTML")
+        print("✅ Message sent to Telegram.")
+    except Exception as e:
+        print(f"❌ Failed to send Telegram message: {e}")
 
-    should_alert = (
-        current_status == "open"
-        and status_data["last_status"] != "open"
-        and status_data.get("last_alert_daypart") != current_daypart
-    )
+def check_vip_form():
+    try:
+        response = requests.get(URL, headers=HEADERS)
+        response.raise_for_status()
 
-    if should_alert:
-        send_telegram_message(
-            "🚨 The Topstep VIP Form is LIVE! Go check it out: https://www.topstep.tv/topstepvip/"
-        )
-        status_data["last_alert_daypart"] = current_daypart
+        soup = BeautifulSoup(response.text, "html.parser")
 
-    status_data["last_status"] = current_status
-    save_status(status_data)
+        # Customize this to extract specific content (e.g., headings, forms, divs)
+        title = soup.title.string.strip() if soup.title else "VIP Page Checked"
+
+        message = f"🧑‍🦱 <b>{title}</b>\nVIP form page is accessible."
+        send_telegram_message(message)
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error checking the site: {e}")
+        send_telegram_message(f"❌ Failed to access VIP form page.\nError: {e}")
 
 if __name__ == "__main__":
-    main()
+    check_vip_form()
