@@ -7,7 +7,7 @@ import requests
 FEED_URL = "https://trumpstruth.org/feed"
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_CHAT_ID = "@tsvipform"
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 POSTED_LOG = "posted_truth_titles.txt"
