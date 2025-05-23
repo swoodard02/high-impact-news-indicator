@@ -30,7 +30,7 @@ def is_within_next_30_minutes(event_time_str):
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
         event_time = pytz.UTC.localize(event_time)
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=30)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
@@ -88,7 +88,7 @@ def fetch_and_post_events():
             event_time_utc = datetime.strptime(pub_date.replace(" GMT", ""), '%a, %d %b %Y %H:%M')
             event_time_utc = pytz.UTC.localize(event_time_utc)
             event_time_et = event_time_utc.astimezone(EASTERN_TZ)
-            event_time_str = event_time_et.strftime("%m/%d/%Y %H:%M ET")
+            event_time_str = event_time_et.strftime("%H:%M ET")
         except Exception as e:
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
