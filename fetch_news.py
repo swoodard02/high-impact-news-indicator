@@ -33,13 +33,15 @@ def is_within_next_1440_minutes(event_time_str):
         event_time = pytz.UTC.localize(event_time)
 
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)  # 24 hours
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
 
 def get_impact_from_tags(tags):
+    # tags is a list of dicts or strings
     for tag in tags:
+        # tag can be dict with 'term' or string
         term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
         if 'sprite-high-impact' in term:
             return "High Impact"
@@ -70,17 +72,22 @@ def fetch_and_post_events():
         title = entry.title
         pub_date = entry.published
         tags = entry.get('tags', [])
+
         impact = get_impact_from_tags(tags)
+        print(f"Event: {title} | Impact: {impact} | Published: {pub_date} | Tags: {tags}")
 
-        # Only consider events within the next 24 hours
         if not is_within_next_1440_minutes(pub_date):
+            print(f"Skipping '{title}' due to time check.")
             continue
 
-        # Only post high or medium impact events
         if impact not in ["High Impact", "Medium Impact"]:
+            print(f"Skipping '{title}' due to impact level.")
             continue
 
-        # Parse event time and convert to Eastern
+        if title in posted_events:
+            print(f"Skipping '{title}' because already posted.")
+            continue
+
         try:
             event_time_utc = datetime.strptime(pub_date.replace(" GMT", ""), '%a, %d %b %Y %H:%M')
             event_time_utc = pytz.UTC.localize(event_time_utc)
@@ -89,9 +96,6 @@ def fetch_and_post_events():
         except Exception as e:
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
-
-        if title in posted_events:
-            continue
 
         emoji = "🔴" if impact == "High Impact" else "🟠"
         event_line = f"{emoji} <b>{title}</b> at {event_time_str}"
@@ -107,13 +111,8 @@ def fetch_and_post_events():
     else:
         print("No new events to post.")
 
-def send_test_message():
-    test_message = "<b>✅ Test Alert:</b> This is a test message from your bot."
-    success = send_telegram_message(test_message)
-    print("Test message sent!" if success else "Failed to send test message.")
-
 if __name__ == "__main__":
-    # send_test_message()
     fetch_and_post_events()
+
 
 
