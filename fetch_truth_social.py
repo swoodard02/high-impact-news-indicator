@@ -36,10 +36,9 @@ def send_telegram_message(message):
 def fetch_and_post_truths():
     feed = feedparser.parse(FEED_URL)
     posted_truths = load_posted_truths()
-    now = datetime.now(pytz.UTC).astimezone(EASTERN_TZ)  # Use Eastern time for daily tracking
+    now_et = datetime.now(pytz.UTC).astimezone(EASTERN_TZ)
 
     print(f"Fetched {len(feed.entries)} entries.")
-
     updated_truths = {}
 
     for entry in feed.entries:
@@ -49,24 +48,36 @@ def fetch_and_post_truths():
             print(f"Skipping entry with no title: {title}")
             continue
 
+        # Skip if this title was already posted today
         last_posted_str = posted_truths.get(title)
         if last_posted_str:
             try:
-                last_posted_time = datetime.fromisoformat(last_posted_str).astimezone(EASTERN_TZ)
-                if last_posted_time.date() == now.date():
-                    print(f"Skipping entry already posted today: {title}")
+                last_posted_et = datetime.fromisoformat(last_posted_str).astimezone(EASTERN_TZ)
+                if last_posted_et.date() == now_et.date():
+                    print(f"Skipping already posted today: {title}")
                     continue
             except Exception as e:
-                print(f"Error parsing last posted time for '{title}': {e}")
+                print(f"Error parsing time for: {title} - {e}")
 
-        message = f"🧑‍🦱 <b>{title}</b>"
+        # Get published time and format it to HH:MM AM/PM ET
+        published = entry.get("published", "")
+        try:
+            dt_utc = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %z")
+            dt_et = dt_utc.astimezone(EASTERN_TZ)
+            time_str = dt_et.strftime("%I:%M %p ET")
+        except Exception as e:
+            print(f"Time parsing error: {e}")
+            time_str = ""
+
+        message = f"🧑‍🦱 <b>{title}</b>\n{time_str}"
         print(f"Posting: {message}")
         if send_telegram_message(message):
-            updated_truths[title] = now.isoformat()
+            updated_truths[title] = now_et.isoformat()
 
     posted_truths.update(updated_truths)
     save_posted_truths(posted_truths)
 
 if __name__ == "__main__":
     fetch_and_post_truths()
+
 
