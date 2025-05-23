@@ -38,7 +38,10 @@ def check_site_and_notify():
 
         # You can refine this logic to detect specific changes or content
         message = "📢 VIP Form page is live and accessible."
-        Bot(token=TELEGRAM_BOT_TOKEN).send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+        import asyncio
+	bot = Bot(token=TELEGRAM_BOT_TOKEN)
+	asyncio.run(bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message))
+
         print("Notification sent.")
 
     except requests.exceptions.RequestException as e:
