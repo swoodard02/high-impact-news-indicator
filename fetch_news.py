@@ -94,7 +94,7 @@ def fetch_and_post_events():
             event_time_str = pub_date
 
         emoji = "🔴" if impact == "High Impact" else "🟠"
-        event_line = f"{emoji} <b>{title}</b> at {event_time_str}"
+        event_line = f"{emoji} <b>{title}</b>  -  {event_time_str}"
         events_to_post.append(event_line)
         posted_events.add(title)
 
