@@ -1,6 +1,6 @@
 import feedparser
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import requests
 import json
@@ -11,14 +11,15 @@ TELEGRAM_CHAT_ID = "@tsvipform"
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 POSTED_LOG = "posted_truths.json"
+LOOKBACK_WINDOW = timedelta(minutes=5)
 
-def load_posted_truths():
+def load_posted_titles():
     if os.path.exists(POSTED_LOG):
         with open(POSTED_LOG, "r") as f:
             return json.load(f)
     return {}
 
-def save_posted_truths(data):
+def save_posted_titles(data):
     with open(POSTED_LOG, "w") as f:
         json.dump(data, f)
 
@@ -33,13 +34,14 @@ def send_telegram_message(message):
     print(f"Telegram response: {response.status_code} - {response.text}")
     return response.ok
 
-def fetch_and_post_truths():
+def fetch_and_post_recent_truths():
     feed = feedparser.parse(FEED_URL)
-    posted_truths = load_posted_truths()
-    now_et = datetime.now(EASTERN_TZ)
+    posted_titles = load_posted_titles()
+    now_utc = datetime.now(pytz.UTC)
+    now_et = now_utc.astimezone(EASTERN_TZ)
 
     print(f"Fetched {len(feed.entries)} entries.")
-    updated_truths = {}
+    updated_titles = {}
 
     for entry in feed.entries:
         title = entry.title.strip()
@@ -48,37 +50,36 @@ def fetch_and_post_truths():
             print(f"Skipping entry with no title: {title}")
             continue
 
-        # Check if already posted today (convert saved time to ET)
-        last_posted_str = posted_truths.get(title)
-        if last_posted_str:
-            try:
-                last_posted_time = datetime.fromisoformat(last_posted_str)
-                last_posted_et = last_posted_time.astimezone(EASTERN_TZ)
-                if last_posted_et.date() == now_et.date():
-                    print(f"Skipping already posted today: {title}")
-                    continue
-            except Exception as e:
-                print(f"Error checking posted time for '{title}': {e}")
-
-        # Parse published time from feed
+        # Parse published time
         published = entry.get("published", "")
         try:
-            dt_utc = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %z")
-            dt_et = dt_utc.astimezone(EASTERN_TZ)
-            time_str = dt_et.strftime("%I:%M %p ET")
+            published_dt = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %z")
         except Exception as e:
-            print(f"Time parsing error: {e}")
-            time_str = ""
+            print(f"Skipping due to time parsing error: {e}")
+            continue
+
+        # Only allow posts published in the last 5 minutes
+        if now_utc - published_dt > LOOKBACK_WINDOW:
+            continue
+
+        # Check if already posted
+        if title in posted_titles:
+            print(f"Skipping already posted: {title}")
+            continue
+
+        # Format time string
+        post_time_et = published_dt.astimezone(EASTERN_TZ)
+        time_str = post_time_et.strftime("%I:%M %p ET")
 
         message = f"🧑‍🦱 <b>{title}</b>\n{time_str}"
         print(f"Posting: {message}")
         if send_telegram_message(message):
-            updated_truths[title] = now_et.isoformat()
+            updated_titles[title] = now_et.isoformat()
 
-    # Save updated truths
-    posted_truths.update(updated_truths)
-    save_posted_truths(posted_truths)
+    # Save posted titles
+    posted_titles.update(updated_titles)
+    save_posted_titles(posted_titles)
 
 if __name__ == "__main__":
-    fetch_and_post_truths()
+    fetch_and_post_recent_truths()
 
