@@ -1,0 +1,29 @@
+name: Fetch Truth Social Posts
+
+on:
+  schedule:
+    - cron: '*/1 9-23 * * *'  # Every minute from 5:00 AM to 11:00 PM ET
+  workflow_dispatch:  # Allow manual triggering
+  
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt || pip install feedparser pytz requests
+          
+      - name: Run fetch_truth_social.py
+        run: python fetch_truth_social.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
