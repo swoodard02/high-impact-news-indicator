@@ -12,7 +12,7 @@ TELEGRAM_CHAT_ID = "@tsvipform"
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 POSTED_LOG = "posted_truths.json"
-POST_WINDOW = timedelta(minutes=120)
+POST_WINDOW = timedelta(minutes=300)
 
 def load_posted_truths():
     if os.path.exists(POSTED_LOG):
@@ -79,8 +79,8 @@ def fetch_and_post_truths():
             continue
 
         age = now_utc - dt_utc
-	age_minutes = age.total_seconds() / 60
-	print(f"Entry age (minutes): {age_minutes:.2f}")
+        age_minutes = age.total_seconds() / 60
+        print(f"Entry age (minutes): {age_minutes:.2f}")
 
         if age > POST_WINDOW:
             print("Skipped: older than 5 minutes")
@@ -106,10 +106,7 @@ def fetch_and_post_truths():
     save_posted_truths(posted_truths)
 
 if __name__ == "__main__":
-    # Uncomment this block to send a manual test message to Telegram:
+    # Uncomment to send a manual test:
     # print("Sending manual test message to Telegram...")
     # send_telegram_message("Test message from fetch_truth_social.py script")
-    
     fetch_and_post_truths()
-
-
