@@ -36,7 +36,7 @@ def send_telegram_message(message):
 def fetch_and_post_truths():
     feed = feedparser.parse(FEED_URL)
     posted_truths = load_posted_truths()
-    now_et = datetime.now(pytz.UTC).astimezone(EASTERN_TZ)
+    now_et = datetime.now(EASTERN_TZ)
 
     print(f"Fetched {len(feed.entries)} entries.")
     updated_truths = {}
@@ -48,18 +48,19 @@ def fetch_and_post_truths():
             print(f"Skipping entry with no title: {title}")
             continue
 
-        # Skip if this title was already posted today
+        # Check if already posted today (convert saved time to ET)
         last_posted_str = posted_truths.get(title)
         if last_posted_str:
             try:
-                last_posted_et = datetime.fromisoformat(last_posted_str).astimezone(EASTERN_TZ)
+                last_posted_time = datetime.fromisoformat(last_posted_str)
+                last_posted_et = last_posted_time.astimezone(EASTERN_TZ)
                 if last_posted_et.date() == now_et.date():
                     print(f"Skipping already posted today: {title}")
                     continue
             except Exception as e:
-                print(f"Error parsing time for: {title} - {e}")
+                print(f"Error checking posted time for '{title}': {e}")
 
-        # Get published time and format it to HH:MM AM/PM ET
+        # Parse published time from feed
         published = entry.get("published", "")
         try:
             dt_utc = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %z")
@@ -74,10 +75,10 @@ def fetch_and_post_truths():
         if send_telegram_message(message):
             updated_truths[title] = now_et.isoformat()
 
+    # Save updated truths
     posted_truths.update(updated_truths)
     save_posted_truths(posted_truths)
 
 if __name__ == "__main__":
     fetch_and_post_truths()
-
 
