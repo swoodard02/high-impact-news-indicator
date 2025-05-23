@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import os
 import requests
 import json
-import time
 
 FEED_URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
 POSTED_EVENTS_FILE = "posted_events.json"
@@ -26,24 +25,27 @@ def save_posted_events(posted):
 
 def is_within_next_1440_minutes(event_time_str):
     try:
+        # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
+
+        # Assume UTC since the feed says GMT
         event_time = pytz.UTC.localize(event_time)
+
         now = datetime.now(pytz.UTC)
-        return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)
+        return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)  # 24 hours
     except Exception as e:
         print(f"Time parsing error: {e}")
         return False
 
-def get_impact_from_description(description):
-    """Search for impact class in the HTML from description"""
-    if "sprite-high-impact" in description:
-        return "High Impact"
-    elif "sprite-medium-impact" in description:
-        return "Medium Impact"
-    elif "sprite-low-impact" in description:
-        return "Low Impact"
-    return "Unknown"
+def get_impact_from_tags(tags):
+    for tag in tags:
+        term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
+        if 'sprite-high-impact' in term:
+            return "High Impact"
+        if 'sprite-medium-impact' in term:
+            return "Medium Impact"
+    return "Low Impact"
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -62,17 +64,23 @@ def fetch_and_post_events():
 
     print(f"Fetched {len(feed.entries)} entries from RSS feed.")
 
+    events_to_post = []
+
     for entry in feed.entries:
         title = entry.title
         pub_date = entry.published
-        description = entry.get("description", "")
+        tags = entry.get('tags', [])
+        impact = get_impact_from_tags(tags)
 
-        impact = get_impact_from_description(description)
+        # Only consider events within the next 24 hours
+        if not is_within_next_1440_minutes(pub_date):
+            continue
 
-        print(f"\nEvent: {title}")
-        print(f"Impact: {impact}")
-        print(f"Description snippet: {description[:80]}...")
+        # Only post high or medium impact events
+        if impact not in ["High Impact", "Medium Impact"]:
+            continue
 
+        # Parse event time and convert to Eastern
         try:
             event_time_utc = datetime.strptime(pub_date.replace(" GMT", ""), '%a, %d %b %Y %H:%M')
             event_time_utc = pytz.UTC.localize(event_time_utc)
@@ -83,31 +91,29 @@ def fetch_and_post_events():
             event_time_str = pub_date
 
         if title in posted_events:
-            print(f"Already posted: {title}")
             continue
 
-        if is_within_next_1440_minutes(pub_date):
-            # Use emoji
-            if impact == "High Impact":
-                emoji = "🔴"
-            elif impact == "Medium Impact":
-                emoji = "🟠"
-            elif impact == "Low Impact":
-                emoji = "⚪"
-            else:
-                emoji = "⚪"
+        emoji = "🔴" if impact == "High Impact" else "🟠"
+        event_line = f"{emoji} <b>{title}</b> at {event_time_str}"
+        events_to_post.append(event_line)
+        posted_events.add(title)
 
-            message = f"{emoji} <b>{title}</b> at {event_time_str}"
-            print(f"Posting event: {message}")
+    if events_to_post:
+        full_message = "<b>🗓 Upcoming Economic Events (Next 24h):</b>\n\n" + "\n".join(events_to_post)
+        print(f"Posting events:\n{full_message}")
+        success = send_telegram_message(full_message)
+        if success:
+            save_posted_events(posted_events)
+    else:
+        print("No new events to post.")
 
-            if send_telegram_message(message):
-                posted_events.add(title)
-                time.sleep(1.5)  # Avoid hitting rate limits
-
-    save_posted_events(posted_events)
+def send_test_message():
+    test_message = "<b>✅ Test Alert:</b> This is a test message from your bot."
+    success = send_telegram_message(test_message)
+    print("Test message sent!" if success else "Failed to send test message.")
 
 if __name__ == "__main__":
+    # send_test_message()
     fetch_and_post_events()
-
 
 
