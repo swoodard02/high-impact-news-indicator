@@ -1,4 +1,4 @@
-Name: Fetch and Post News
+name: Fetch and Post News
 
 on:
   schedule:
