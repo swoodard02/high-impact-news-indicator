@@ -73,3 +73,5 @@ def fetch_and_post_truths():
 
 if __name__ == "__main__":
     fetch_and_post_truths()
+    print(f"Using chat ID: {TELEGRAM_CHAT_ID}")
+
