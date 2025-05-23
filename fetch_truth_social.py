@@ -12,7 +12,7 @@ TELEGRAM_CHAT_ID = "@tsvipform"
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 POSTED_LOG = "posted_truths.json"
-POST_WINDOW = timedelta(minutes=300)
+POST_WINDOW = timedelta(minutes=500)
 
 def load_posted_truths():
     if os.path.exists(POSTED_LOG):
