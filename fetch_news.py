@@ -23,15 +23,11 @@ def save_posted_events(posted):
     with open(POSTED_EVENTS_FILE, "w") as f:
         json.dump(list(posted), f)
 
-def is_within_next_60_minutes(event_time_str):
+def is_within_next_1440_minutes(event_time_str):
     try:
-        # Strip GMT and parse as naive datetime
         event_time_str = event_time_str.replace(" GMT", "")
         event_time = datetime.strptime(event_time_str, '%a, %d %b %Y %H:%M')
-
-        # Assume UTC since the feed says GMT
         event_time = pytz.UTC.localize(event_time)
-
         now = datetime.now(pytz.UTC)
         return timedelta(0) <= (event_time - now) <= timedelta(minutes=1440)
     except Exception as e:
@@ -40,6 +36,7 @@ def is_within_next_60_minutes(event_time_str):
 
 def get_impact_from_tags(tags):
     for tag in tags:
+        print(f"Raw tag: {tag}")  # DEBUG print to inspect tag format
         term = tag.get('term', '') if isinstance(tag, dict) else str(tag)
         if 'sprite-high-impact' in term:
             return "High Impact"
@@ -69,7 +66,12 @@ def fetch_and_post_events():
         pub_date = entry.published
         tags = entry.get('tags', [])
 
+        print(f"\nTags for '{title}': {tags}")  # DEBUG line to see tag structure
+
+        # Get impact level (temporarily override to force test)
         impact = get_impact_from_tags(tags)
+        # Uncomment the next line to force High Impact for all:
+        # impact = "High Impact"
 
         # Parse event time and convert to Eastern
         try:
@@ -81,30 +83,26 @@ def fetch_and_post_events():
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
 
-        # Assign icon based on impact level
-        icon = "⚪"  # Low Impact
+        # Compose color emoji based on impact
         if impact == "High Impact":
-            icon = "🔴"
+            emoji = "🔴"
         elif impact == "Medium Impact":
-            icon = "🟠"
+            emoji = "🟠"
+        else:
+            emoji = "⚪"
 
-        message = f"{icon} <b>{title}</b> at {event_time_str}"
+        message = f"{emoji} <b>{title}</b> at {event_time_str}"
 
-        if is_within_next_60_minutes(pub_date) and title not in posted_events:
+        # Skip posted check for testing
+        if is_within_next_1440_minutes(pub_date):
             print(f"Posting event: {message}")
-            success = send_telegram_message(message)
-            if success:
-                posted_events.add(title)
+            send_telegram_message(message)
 
-    save_posted_events(posted_events)
-
-def send_test_message():
-    test_message = "<b>✅ Test Alert:</b> This is a test message from your bot."
-    success = send_telegram_message(test_message)
-    print("Test message sent!" if success else "Failed to send test message.")
+    # Optionally comment out to avoid saving during test
+    # save_posted_events(posted_events)
 
 if __name__ == "__main__":
-    # send_test_message()
     fetch_and_post_events()
+
 
 
