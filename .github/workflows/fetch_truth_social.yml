@@ -1,38 +1,39 @@
-name: Fetch Truth Social Posts
+name: Fetch and Post Truths
 
 on:
   schedule:
-    - cron: '*/5 5-23 * * 0-5'  # Every minute from 5:00 AM to 11:00 PM ET
-  workflow_dispatch:  # Allow manual triggering
-  
-jobs:
-  run-script:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-          
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt || pip install feedparser pytz requests
-          
-      - name: Run fetch_truth_social.py
-        run: python fetch_truth_social.py
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    - cron: '*/5 9-23 * * 1-5'  # Every 5 minutes, Mon–Fri (UTC)
+  workflow_dispatch:  # Allow manual runs
 
-     - name: Commit and push posted log
-       run: |
-         git config user.name github-actions
-         git config user.email github-actions@github.com
-         git add posted_truths.json
-         git commit -m "Update posted log" || echo "No changes to commit"
-         git push
+jobs:
+  post-truths:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        persist-credentials: true  # Required to push changes
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Run fetch script
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: python fetch_and_post_truths.py
+
+    - name: Commit and push posted log
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git add posted_truths.json
+        git commit -m "Update posted_truths.json" || echo "No changes to commit"
+        git push
 
