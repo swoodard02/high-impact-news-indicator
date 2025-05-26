@@ -2,7 +2,7 @@ name: Fetch Truth Social Posts
 
 on:
   schedule:
-    - cron: '*/1 5-23 * * 0-5'  # Every minute from 5:00 AM to 11:00 PM ET
+    - cron: '*/5 5-23 * * 0-5'  # Every minute from 5:00 AM to 11:00 PM ET
   workflow_dispatch:  # Allow manual triggering
   
 jobs:
