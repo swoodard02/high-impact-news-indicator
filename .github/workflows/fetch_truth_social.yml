@@ -27,7 +27,7 @@ jobs:
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      run: python fetch_and_post_truths.py
+      run: python fetch_truth_social.py
 
     - name: Commit and push posted log
       run: |
