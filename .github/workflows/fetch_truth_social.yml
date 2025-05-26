@@ -2,9 +2,9 @@ name: Fetch and Post Truths
 
 on:
   schedule:
-    # From 5 AM to 11:30 PM ET (i.e., 09:00 to 23:30 UTC) on weekdays
+    # From 5 AM to 11:30 PM ET (09:00 to 23:30 UTC) on weekdays
     - cron: '*/30 9-23 * * 1-5'
-    # From 12:00 AM to 2:30 AM ET (i.e., 00:00 to 2:30 UTC) on weekdays
+    # From 12:00 AM to 2:30 AM ET (00:00 to 02:30 UTC) on weekdays
     - cron: '*/30 0-2 * * 2-6'
 
 jobs:
@@ -12,30 +12,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        persist-credentials: true  # Required to push changes
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Run fetch script
-      env:
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TELEGRAM_CHAT_ID: "@tsvipform"
-      run: python fetch_truth_social.py
+      - name: Run fetch script
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: "@tsvipform"
+        run: python fetch_truth_social.py
 
-    - name: Commit and push posted log
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add posted_truths.json
-        git commit -m "Update posted_truths.json" || echo "No changes to commit"
-        git push
+      - name: Commit and push posted log
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add posted_truths.json
+          git commit -m "Update posted_truths.json" || echo "No changes to commit"
+          git push
 
