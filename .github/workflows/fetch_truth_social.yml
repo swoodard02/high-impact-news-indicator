@@ -6,6 +6,7 @@ on:
     - cron: '*/30 9-23 * * 1-5'
     # From 12:00 AM to 2:30 AM ET (00:00 to 02:30 UTC) on weekdays
     - cron: '*/30 0-2 * * 2-6'
+  workflow_dispatch:  #Allow manual runs
 
 jobs:
   post-truths:
