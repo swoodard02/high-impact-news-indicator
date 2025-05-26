@@ -2,8 +2,10 @@ name: Fetch and Post News
 
 on:
   schedule:
-    - cron: '*/30 5-23 * * 1-5'
-  workflow_dispatch:
+    # From 5 AM to 11:30 PM ET (i.e., 09:00 to 23:30 UTC) on weekdays
+    - cron: '*/30 9-23 * * 1-5'
+    # From 12:00 AM to 2:30 AM ET (i.e., 00:00 to 2:30 UTC) on weekdays
+    - cron: '*/30 0-2 * * 2-6'
 
 jobs:
   run-script:
