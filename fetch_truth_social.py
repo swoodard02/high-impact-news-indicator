@@ -1,6 +1,7 @@
 import feedparser
 import pytz
 from datetime import datetime
+from dateutil.parser import isoparse
 import os
 import requests
 import json
@@ -43,7 +44,7 @@ def fetch_and_post_truths():
     feed = feedparser.parse(FEED_URL)
     posted_data = load_posted_data()
     last_post_time_str = posted_data.get("last_post_time")
-    last_post_time = datetime.fromisoformat(last_post_time_str) if last_post_time_str else None
+    last_post_time = isoparse(last_post_time_str) if last_post_time_str else None
 
     print(f"Fetched {len(feed.entries)} entries.")
     print(f"Last posted time: {last_post_time_str}")
@@ -57,7 +58,8 @@ def fetch_and_post_truths():
         else:
             title = raw_title
 
-        if "[No Title]" in title or title == "":
+        normalized_title = title.strip().lower()
+        if normalized_title.startswith("[no title]") or not normalized_title:
             description = entry.get("description", "").strip()
             if description.startswith("<![CDATA[") and description.endswith("]]>"):
                 description = description[9:-3].strip()
@@ -101,4 +103,5 @@ def fetch_and_post_truths():
 
 if __name__ == "__main__":
     fetch_and_post_truths()
+
 
