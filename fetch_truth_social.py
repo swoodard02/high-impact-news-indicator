@@ -83,7 +83,7 @@ def fetch_and_post_truths():
         new_entries.append((dt_utc, title))
 
     # Reverse to send oldest first
-    # new_entries.reverse()
+      new_entries.reverse()
 
     latest_time_posted = last_post_time
 
