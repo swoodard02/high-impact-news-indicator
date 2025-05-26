@@ -1,7 +1,7 @@
 import feedparser
 import pytz
 from datetime import datetime
-from dateutil.parser import isoparse
+from dateutil import parser as dateutil_parser
 import os
 import requests
 import json
@@ -44,7 +44,13 @@ def fetch_and_post_truths():
     feed = feedparser.parse(FEED_URL)
     posted_data = load_posted_data()
     last_post_time_str = posted_data.get("last_post_time")
-    last_post_time = isoparse(last_post_time_str) if last_post_time_str else None
+    last_post_time = None
+
+    if last_post_time_str:
+        try:
+            last_post_time = dateutil_parser.isoparse(last_post_time_str)
+        except Exception as e:
+            print(f"Failed to parse stored last post time: {e}")
 
     print(f"Fetched {len(feed.entries)} entries.")
     print(f"Last posted time: {last_post_time_str}")
@@ -58,21 +64,16 @@ def fetch_and_post_truths():
         else:
             title = raw_title
 
-        normalized_title = title.strip().lower()
-        if normalized_title.startswith("[no title]") or not normalized_title:
-            description = entry.get("description", "").strip()
-            if description.startswith("<![CDATA[") and description.endswith("]]>"):
-                description = description[9:-3].strip()
-            fallback_text = clean_html(description)
-            if not fallback_text:
-                fallback_text = entry.get("link", "No content available")
-            title = f"(No Title) {fallback_text}"
+        # Skip [No Title] posts
+        if "[No Title]" in title or title.lower() == "no title" or not title:
+            print(f"Skipping entry with no usable title: {title}")
+            continue
 
         published = entry.get("published", "")
         try:
             dt_utc = datetime.strptime(published, "%a, %d %b %Y %H:%M:%S %z")
         except Exception as e:
-            print(f"Failed to parse date for '{title}': {e}")
+            print(f"Failed to parse published date for '{title}': {e}")
             continue
 
         if last_post_time and dt_utc <= last_post_time:
@@ -96,12 +97,13 @@ def fetch_and_post_truths():
             if latest_time_posted is None or dt_utc > latest_time_posted:
                 latest_time_posted = dt_utc
 
-    # Update last post time
+    # Save updated post time
     if latest_time_posted:
         posted_data["last_post_time"] = latest_time_posted.isoformat()
         save_posted_data(posted_data)
 
 if __name__ == "__main__":
     fetch_and_post_truths()
+
 
 
