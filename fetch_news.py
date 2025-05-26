@@ -10,7 +10,7 @@ FEED_URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
 POSTED_EVENTS_FILE = "posted_events.json"
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_CHAT_ID = "@tsvipform"
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 
@@ -43,9 +43,11 @@ COUNTRY_CODES = {
     "hungary": "HU",
     "poland": "PL",
     "turkey": "TR",
-    "nigeria": "NG",  # ✅ Add this line
+    "nigeria": "NG",
 }
 
+# Only allow Medium Impact events from these countries
+ALLOWED_MEDIUM_IMPACT_COUNTRIES = {"AU", "NZ", "CA", "US", "CH", "EU", "GB", "JP"}
 
 def load_posted_events():
     if os.path.exists(POSTED_EVENTS_FILE):
@@ -92,10 +94,10 @@ def extract_country_and_flag(link):
                 country_name = slug.replace("-", " ").title()
                 iso_code = COUNTRY_CODES.get(slug)
                 flag = country_code_to_emoji(iso_code) if iso_code else ""
-                return flag, country_name
+                return flag, country_name, iso_code
     except Exception as e:
         print(f"Error extracting country from link '{link}': {e}")
-    return "", "Unknown"
+    return "", "Unknown", None
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -129,8 +131,14 @@ def fetch_and_post_events():
             print(f"Skipping '{title}' due to time check.")
             continue
 
-        if impact not in ["High Impact", "Medium Impact"]:
-            print(f"Skipping '{title}' due to impact level.")
+        flag, country, iso_code = extract_country_and_flag(link)
+
+        # Impact filtering
+        if impact == "Medium Impact" and (iso_code not in ALLOWED_MEDIUM_IMPACT_COUNTRIES):
+            print(f"Skipping '{title}' due to medium impact from unlisted country ({country}).")
+            continue
+        elif impact == "Low Impact":
+            print(f"Skipping '{title}' due to low impact.")
             continue
 
         if title in posted_events:
@@ -146,9 +154,8 @@ def fetch_and_post_events():
             print(f"Error parsing date for event '{title}': {e}")
             event_time_str = pub_date
 
-        flag, country = extract_country_and_flag(link)
         emoji = "🔴" if impact == "High Impact" else "🟠"
-        event_line = f"{emoji}  {flag} <b> {title}</b>  -  {event_time_str}"
+        event_line = f"{emoji}  {flag} <b>{title}</b>  -  {event_time_str}"
         events_to_post.append(event_line)
         posted_events.add(title)
 
@@ -163,6 +170,5 @@ def fetch_and_post_events():
 
 if __name__ == "__main__":
     fetch_and_post_events()
-
 
 
