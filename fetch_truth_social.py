@@ -9,7 +9,7 @@ import re
 
 FEED_URL = "https://trumpstruth.org/feed"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = "@tsvipform"
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 POSTED_LOG = "posted_truths.json"
