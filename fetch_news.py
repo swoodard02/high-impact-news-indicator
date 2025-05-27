@@ -10,7 +10,7 @@ FEED_URL = "https://www.myfxbook.com/rss/forex-economic-calendar-events"
 POSTED_EVENTS_FILE = "posted_events.json"
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = "@tsvipform"
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 EASTERN_TZ = pytz.timezone("US/Eastern")
 
